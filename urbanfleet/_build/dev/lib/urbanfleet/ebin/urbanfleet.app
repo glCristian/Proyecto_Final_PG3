@@ -1,0 +1,12 @@
+{application,urbanfleet,
+             [{modules,['Elixir.Taxi.Application','Elixir.Taxi.CLI',
+                        'Elixir.Taxi.Location','Elixir.Taxi.Logger',
+                        'Elixir.Taxi.Server','Elixir.Taxi.Trip',
+                        'Elixir.Taxi.TripSupervisor',
+                        'Elixir.Taxi.UserManager']},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,crypto]},
+              {description,"urbanfleet"},
+              {registered,[]},
+              {vsn,"0.1.0"},
+              {mod,{'Elixir.Taxi.Application',[]}}]}.
