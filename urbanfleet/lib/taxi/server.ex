@@ -5,7 +5,7 @@ defmodule Taxi.Server do
   use GenServer
 
   def start_link(_), do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
-  def init(_), do: {:ok, %{sessions: %{}, default_duration: 20, pending_ttl: 20}}
+  def init(_), do: {:ok, %{sessions: %{}, default_duration: 20, pending_ttl: 60}}
 
   # Public API (called by CLI)
   def connect(username, password, role) do
@@ -32,13 +32,13 @@ defmodule Taxi.Server do
     Taxi.UserManager.ensure_storage!()
     case Taxi.UserManager.login_or_register(u, p, role) do
       {:ok, user} ->
-        {:reply, {:ok, user}, put_in(state.sessions[u], %{role: role})}
+        {:reply, {:ok, user}, put_in(state, [:sessions, u], %{role: role})}
       {:error, r} -> {:reply, {:error, r}, state}
     end
   end
 
   def handle_call({:disconnect, u}, _from, state) do
-    {:reply, :ok, update_in(state.sessions, &Map.delete(&1, u))}
+    {:reply, :ok, update_in(state, [:sessions], &Map.delete(&1, u))}
   end
 
   def handle_call({:request_trip, client, o, d}, _from, state) do
@@ -46,7 +46,7 @@ defmodule Taxi.Server do
       !Map.has_key?(state.sessions, client) -> {:reply, {:error, :not_connected}, state}
       !Taxi.Location.valid?(o) or !Taxi.Location.valid?(d) -> {:reply, {:error, :invalid_location}, state}
       true ->
-        id = "trip_" <> :erlang.unique_integer([:positive]) |> Integer.to_string()
+        id = "trip_" <> Integer.to_string(:erlang.unique_integer([:positive]))
         {:ok, _pid} = Taxi.TripSupervisor.start_trip(%{
           id: id, client: client, origin: o, destination: d,
           duration: state.default_duration, pending_ttl: state.pending_ttl

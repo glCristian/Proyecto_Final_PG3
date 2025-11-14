@@ -1,0 +1,8 @@
+2025-11-14T21:49:44.298182Z; trip trip_50 created by jj; from=Parque; to=Centro
+2025-11-14T21:50:04.292087Z; trip trip_50 expired without driver; client=jj; from=Parque; to=Centro
+2025-11-14T21:53:02.496035Z; trip trip_82 created by jj; from=Parque; to=Centro
+2025-11-14T21:53:22.496978Z; trip trip_82 expired without driver; client=jj; from=Parque; to=Centro
+2025-11-14T21:55:36.347109Z; trip trip_114 created by jj; from=Universidad; to=Estadio
+2025-11-14T21:55:56.347989Z; trip trip_114 expired without driver; client=jj; from=Universidad; to=Estadio
+2025-11-14T22:01:55.896100Z; trip trip_834 created by jj; from=Universidad; to=Estadio
+2025-11-14T22:02:55.878977Z; trip trip_834 expired without driver; client=jj; from=Universidad; to=Estadio

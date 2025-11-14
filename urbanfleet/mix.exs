@@ -20,6 +20,9 @@ defmodule Urbanfleet.MixProject do
   end
 
   defp deps do
-    []
+    # AÑADIR ESTA DEPENDENCIA PARA HASHEO SEGURO DE CONTRASEÑAS
+    [
+      {:bcrypt_elixir, "~> 3.0"}
+    ]
   end
 end
