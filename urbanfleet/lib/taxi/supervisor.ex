@@ -1,5 +1,7 @@
 defmodule Taxi.TripSupervisor do
-  @moduledoc "Dynamic supervisor helper to start trips."
+  @moduledoc """
+  Dynamic supervisor helper to start trips.
+  """
 
   def start_trip(attrs) do
     spec = %{

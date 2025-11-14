@@ -1,23 +1,11 @@
 defmodule Taxi.Server do
-  @moduledoc "Command-side façade (GenServer) used by the CLI to coordinate actions."
+  @moduledoc """
+  Command-side façade (GenServer) used by the CLI to coordinate actions.
+  """
   use GenServer
 
   def start_link(_), do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
-
-  def init(_) do
-    # Cargamos las ubicaciones una sola vez al iniciar
-    locations = Taxi.Location.list()
-
-    state = %{
-      sessions: %{},
-      default_duration: 20,
-      pending_ttl: 20,
-      # Las guardamos en el estado
-      locations: locations
-    }
-
-    {:ok, state}
-  end
+  def init(_), do: {:ok, %{sessions: %{}, default_duration: 20, pending_ttl: 20}}
 
   # Public API (called by CLI)
   def connect(username, password, role) do
@@ -32,8 +20,7 @@ defmodule Taxi.Server do
 
   def list_trips(), do: GenServer.call(__MODULE__, :list_trips)
 
-  def accept_trip(driver, trip_id),
-    do: GenServer.call(__MODULE__, {:accept_trip, driver, trip_id})
+  def accept_trip(driver, trip_id), do: GenServer.call(__MODULE__, {:accept_trip, driver, trip_id})
 
   def my_score(username), do: Taxi.UserManager.get_score(username)
 
@@ -42,13 +29,11 @@ defmodule Taxi.Server do
   # Callbacks
   @impl true
   def handle_call({:connect, u, p, role}, _from, state) do
-    # Ya no es necesario llamar a ensure_storage! aquí
+    Taxi.UserManager.ensure_storage!()
     case Taxi.UserManager.login_or_register(u, p, role) do
       {:ok, user} ->
         {:reply, {:ok, user}, put_in(state.sessions[u], %{role: role})}
-
-      {:error, r} ->
-        {:reply, {:error, r}, state}
+      {:error, r} -> {:reply, {:error, r}, state}
     end
   end
 
@@ -58,28 +43,15 @@ defmodule Taxi.Server do
 
   def handle_call({:request_trip, client, o, d}, _from, state) do
     cond do
-      !Map.has_key?(state.sessions, client) ->
-        {:reply, {:error, :not_connected}, state}
-
-      # Validamos usando el MapSet que cargamos en el estado
-      !MapSet.member?(state.locations, o) or !MapSet.member?(state.locations, d) ->
-        {:reply, {:error, :invalid_location}, state}
-
+      !Map.has_key?(state.sessions, client) -> {:reply, {:error, :not_connected}, state}
+      !Taxi.Location.valid?(o) or !Taxi.Location.valid?(d) -> {:reply, {:error, :invalid_location}, state}
       true ->
-        id = "trip_" <> Integer.to_string(:erlang.unique_integer([:positive]))
-
-        {:ok, _pid} =
-          Taxi.TripSupervisor.start_trip(%{
-            id: id,
-            client: client,
-            origin: o,
-            destination: d,
-            duration: state.default_duration,
-            pending_ttl: state.pending_ttl
-          })
-
-        Taxi.Logger.append("trip #{id} created by #{client};
-from=#{o}; to=#{d}")
+        id = "trip_" <> :erlang.unique_integer([:positive]) |> Integer.to_string()
+        {:ok, _pid} = Taxi.TripSupervisor.start_trip(%{
+          id: id, client: client, origin: o, destination: d,
+          duration: state.default_duration, pending_ttl: state.pending_ttl
+        })
+        Taxi.Logger.append("trip #{id} created by #{client}; from=#{o}; to=#{d}")
         {:reply, {:ok, id}, state}
     end
   end
@@ -96,7 +68,6 @@ from=#{o}; to=#{d}")
       end)
       |> Enum.reject(&is_nil/1)
       |> Enum.filter(&(&1.status == :pending or &1.status == :in_progress))
-
     {:reply, trips, state}
   end
 

@@ -1,5 +1,7 @@
 defmodule Taxi.Location do
-  @moduledoc "Loads and validates city locations from data/locations.dat (one per line)."
+  @moduledoc """
+  Loads and validates city locations from data/locations.dat (one per line).
+  """
   @path Path.expand("data/locations.dat", File.cwd!())
 
   def list() do

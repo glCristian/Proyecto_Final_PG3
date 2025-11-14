@@ -1,5 +1,7 @@
 defmodule Taxi.Logger do
-  @moduledoc "Lightweight logger that appends human-readable events to data/results.log."
+  @moduledoc """
+  Lightweight logger that appends human-readable events to data/results.log.
+  """
 
   @log_path Path.expand("data/results.log", File.cwd!())
 
