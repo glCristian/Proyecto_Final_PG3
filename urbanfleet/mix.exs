@@ -14,12 +14,16 @@ defmodule Urbanfleet.MixProject do
 
   def application do
     [
-      extra_applications: [:logger, :crypto],
+      extra_applications: [:logger, :crypto, :plug_cowboy], # <-- Añade :plug_cowboy aquí
       mod: {Taxi.Application, []}
     ]
   end
 
   defp deps do
-    []
+    [
+      {:plug_cowboy, "~> 2.6"},
+      {:jason, "~> 1.4"},
+      {:gun, "~> 2.0"}
+    ]
   end
 end
