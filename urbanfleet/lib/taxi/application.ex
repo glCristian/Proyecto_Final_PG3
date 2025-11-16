@@ -3,6 +3,7 @@ defmodule Taxi.Application do
   OTP tree for UrbanFleet (Registry + UserManager + DynamicSupervisor + Server).
   """
   use Application
+  require Logger
 
   def start(_type, _args) do
     children =

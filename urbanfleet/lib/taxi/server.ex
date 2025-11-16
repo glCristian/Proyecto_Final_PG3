@@ -99,10 +99,12 @@ defmodule Taxi.Server do
   end
 
   @impl true
+  def handle_call(:ranking, _from, state) do
+    {:reply, Taxi.UserManager.ranking(20), state}
+  end
+
+  @impl true
   def handle_call({:my_score, username}, _from, state) do
-    # Esta lógica ahora es manejada por el GenServer para que
-    # el CLI remoto pueda llamarla.
-    score_result = Taxi.UserManager.get_score(username)
-    {:reply, score_result, state}
+    {:reply, Taxi.UserManager.get_score(username), state}
   end
 end

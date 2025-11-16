@@ -6,3 +6,6 @@
 2025-11-14T21:55:56.347989Z; trip trip_114 expired without driver; client=jj; from=Universidad; to=Estadio
 2025-11-14T22:01:55.896100Z; trip trip_834 created by jj; from=Universidad; to=Estadio
 2025-11-14T22:02:55.878977Z; trip trip_834 expired without driver; client=jj; from=Universidad; to=Estadio
+2025-11-16T21:24:15.756496Z; trip trip_114 created by Nicolas; from=Parque; to=Centro
+2025-11-16T21:24:19.277198Z; trip trip_114 accepted by pablo; client=Nicolas; from=Parque; to=Centro; duration=20s
+2025-11-16T21:24:39.309404Z; trip trip_114 completed; client=Nicolas; driver=pablo; from=Parque; to=Centro
