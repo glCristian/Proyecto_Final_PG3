@@ -20,7 +20,8 @@ defmodule Taxi.Server do
 
   def list_trips(), do: GenServer.call(__MODULE__, :list_trips)
 
-  def accept_trip(driver, trip_id), do: GenServer.call(__MODULE__, {:accept_trip, driver, trip_id})
+  def accept_trip(driver, trip_id),
+    do: GenServer.call(__MODULE__, {:accept_trip, driver, trip_id})
 
   def my_score(username), do: Taxi.UserManager.get_score(username)
 
@@ -30,10 +31,13 @@ defmodule Taxi.Server do
   @impl true
   def handle_call({:connect, u, p, role}, _from, state) do
     Taxi.UserManager.ensure_storage!()
+
     case Taxi.UserManager.login_or_register(u, p, role) do
       {:ok, user} ->
         {:reply, {:ok, user}, put_in(state, [:sessions, u], %{role: role})}
-      {:error, r} -> {:reply, {:error, r}, state}
+
+      {:error, r} ->
+        {:reply, {:error, r}, state}
     end
   end
 
@@ -43,14 +47,25 @@ defmodule Taxi.Server do
 
   def handle_call({:request_trip, client, o, d}, _from, state) do
     cond do
-      !Map.has_key?(state.sessions, client) -> {:reply, {:error, :not_connected}, state}
-      !Taxi.Location.valid?(o) or !Taxi.Location.valid?(d) -> {:reply, {:error, :invalid_location}, state}
+      !Map.has_key?(state.sessions, client) ->
+        {:reply, {:error, :not_connected}, state}
+
+      !Taxi.Location.valid?(o) or !Taxi.Location.valid?(d) ->
+        {:reply, {:error, :invalid_location}, state}
+
       true ->
         id = "trip_" <> Integer.to_string(:erlang.unique_integer([:positive]))
-        {:ok, _pid} = Taxi.TripSupervisor.start_trip(%{
-          id: id, client: client, origin: o, destination: d,
-          duration: state.default_duration, pending_ttl: state.pending_ttl
-        })
+
+        {:ok, _pid} =
+          Taxi.TripSupervisor.start_trip(%{
+            id: id,
+            client: client,
+            origin: o,
+            destination: d,
+            duration: state.default_duration,
+            pending_ttl: state.pending_ttl
+          })
+
         Taxi.Logger.append("trip #{id} created by #{client}; from=#{o}; to=#{d}")
         {:reply, {:ok, id}, state}
     end
@@ -68,6 +83,7 @@ defmodule Taxi.Server do
       end)
       |> Enum.reject(&is_nil/1)
       |> Enum.filter(&(&1.status == :pending or &1.status == :in_progress))
+
     {:reply, trips, state}
   end
 
@@ -80,5 +96,13 @@ defmodule Taxi.Server do
     else
       _ -> {:reply, {:error, :not_connected}, state}
     end
+  end
+
+  @impl true
+  def handle_call({:my_score, username}, _from, state) do
+    # Esta lógica ahora es manejada por el GenServer para que
+    # el CLI remoto pueda llamarla.
+    score_result = Taxi.UserManager.get_score(username)
+    {:reply, score_result, state}
   end
 end

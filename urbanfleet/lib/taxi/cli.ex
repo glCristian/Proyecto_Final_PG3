@@ -1,33 +1,22 @@
 defmodule Taxi.CLI do
   @moduledoc """
-  Interactive CLI. Build escript with `mix escript.build` then run `./urbanfleet`.
-  Or run with `mix run -e "Taxi.CLI.start()"`.
-  Commands:
-    connect <username> <password> <cliente|conductor>
-    disconnect
-    request_trip origen=<Loc> destino=<Loc>
-    list_trips
-    accept_trip <trip_id>
-    my_score
-    ranking
-    help | quit
+  Distributed Interactive CLI.
+  Connects to a remote Taxi.Server node specified by SERVER_NODE env var.
   """
+  require Logger
 
   def start do
-    IO.puts("UrbanFleet CLI — type 'help' for commands.\n")
+    IO.puts("UrbanFleet CLI (Distributed) — type 'help' for commands.\n")
+    # El check ahora se hace aquí, al iniciar, llamando a la nueva función.
+    IO.puts("Attempting to connect to server node: #{server_node()} ...")
     loop(%{current_user: nil})
   end
 
   defp loop(state) do
     prompt = if state.current_user, do: "(#{state.current_user.username})> ", else: "> "
-
     case IO.gets(prompt) do
-      :eof ->
-        :ok
-
-      nil ->
-        :ok
-
+      :eof -> :ok
+      nil -> :ok
       line ->
         state = handle(String.trim(line), state)
         loop(state)
@@ -35,65 +24,47 @@ defmodule Taxi.CLI do
   end
 
   defp handle("", st), do: st
-
-  defp handle("quit", st),
-    do:
-      (
-        IO.puts("bye")
-        System.halt(0)
-        st
-      )
-
+  defp handle("quit", st), do: (IO.puts("bye"); System.halt(0); st)
   defp handle("help", st) do
     IO.puts(@moduledoc)
+    IO.puts(
+      "Run as: SERVER_NODE=\"server@<ip_servidor>\" iex --name client@<ip_cliente> -e \"Taxi.CLI.start()\""
+    )
+
     st
   end
 
-  defp handle("list_trips", st) do
-    trips = Taxi.Server.list_trips()
+  # --- Todos los handles apuntan a server_node() ---
 
+  defp handle("list_trips", st) do
+    trips = GenServer.call({Taxi.Server, server_node()}, :list_trips)
     Enum.each(trips, fn t ->
       IO.puts(
         "#{t.id} | #{t.status} | #{t.client} -> #{t.destination} (from #{t.origin}) driver=#{inspect(t.driver)}"
       )
     end)
-
     st
   end
 
   defp handle("ranking", st) do
-    Taxi.Server.ranking()
+    GenServer.call({Taxi.Server, server_node()}, :ranking)
     |> Enum.with_index(1)
     |> Enum.each(fn {r, i} -> IO.puts("#{i}. #{r.username} (#{r.role}) - #{r.score}") end)
-
     st
   end
 
-  defp handle("my_score", %{current_user: nil} = st),
-    do:
-      (
-        IO.puts("Not connected.")
-        st
-      )
-
+  defp handle("my_score", %{current_user: nil} = st), do: (IO.puts("Not connected."); st)
   defp handle("my_score", %{current_user: u} = st) do
-    case Taxi.Server.my_score(u.username) do
+    case GenServer.call({Taxi.Server, server_node()}, {:my_score, u.username}) do
       {:ok, s} -> IO.puts("score=#{s}")
       _ -> IO.puts("not found")
     end
-
     st
   end
 
-  defp handle("disconnect", %{current_user: nil} = st),
-    do:
-      (
-        IO.puts("Not connected.")
-        st
-      )
-
+  defp handle("disconnect", %{current_user: nil} = st), do: (IO.puts("Not connected."); st)
   defp handle("disconnect", %{current_user: u} = st) do
-    Taxi.Server.disconnect(u.username)
+    GenServer.call({Taxi.Server, server_node()}, {:disconnect, u.username})
     IO.puts("disconnected")
     %{st | current_user: nil}
   end
@@ -101,47 +72,31 @@ defmodule Taxi.CLI do
   defp handle(<<"connect ", rest::binary>>, st) do
     case String.split(rest, ~r/\s+/, trim: true) do
       [u, p, role] ->
-        case Taxi.Server.connect(u, p, role) do
+        case GenServer.call({Taxi.Server, server_node()}, {:connect, u, p, role}) do
           {:ok, user} ->
             IO.puts("connected as #{user.username} (#{user.role})")
             %{st | current_user: user}
-
-          # CAMBIO: Usar el átomo de error para un mensaje más específico
           {:error, :invalid_credentials_or_role} ->
-            IO.puts("invalid credentials or role: username/password or role is incorrect")
+            IO.puts("invalid credentials or role")
             st
-
           {:error, other} ->
             IO.puts("connection error: #{inspect(other)}")
             st
         end
-
       _ ->
         IO.puts("usage: connect <username> <password> <cliente|conductor>")
         st
     end
   end
 
-  defp handle(<<"request_trip ", _rest::binary>>, %{current_user: nil} = st),
-    do:
-      (
-        IO.puts("Not connected.")
-        st
-      )
-
-  defp handle(<<"request_trip ", _id::binary>>, %{current_user: nil} = st),
-    do:
-      (
-        IO.puts("Not connected.")
-        st
-      )
-
+  defp handle(<<"request_trip ", rest::binary>>, %{current_user: nil} = st),
+    do: (IO.puts("Not connected."); st)
   defp handle(<<"request_trip ", rest::binary>>, %{current_user: u} = st) do
+    # Usa la función parse_kv (que ahora sí está incluida)
     kv = parse_kv(rest)
-
     with o when is_binary(o) <- Map.get(kv, "origen"),
          d when is_binary(d) <- Map.get(kv, "destino") do
-      case Taxi.Server.request_trip(u.username, o, d) do
+      case GenServer.call({Taxi.Server, server_node()}, {:request_trip, u.username, o, d}) do
         {:ok, id} -> IO.puts("trip created id=#{id}")
         {:error, :invalid_location} -> IO.puts("invalid location (check data/locations.dat)")
         {:error, :not_connected} -> IO.puts("not connected")
@@ -150,25 +105,18 @@ defmodule Taxi.CLI do
     else
       _ -> IO.puts("usage: request_trip origen=<Loc> destino=<Loc>")
     end
-
     st
   end
 
   defp handle(<<"accept_trip ", id::binary>>, %{current_user: nil} = st),
-    do:
-      (
-        IO.puts("Not connected.")
-        st
-      )
-
+    do: (IO.puts("Not connected."); st)
   defp handle(<<"accept_trip ", id::binary>>, %{current_user: u} = st) do
-    case Taxi.Server.accept_trip(u.username, String.trim(id)) do
+    case GenServer.call({Taxi.Server, server_node()}, {:accept_trip, u.username, String.trim(id)}) do
       {:ok, :started} -> IO.puts("trip started; will auto-complete")
       {:error, :not_available} -> IO.puts("trip not available")
       {:error, :not_connected} -> IO.puts("not connected")
       other -> IO.puts("error: #{inspect(other)}")
     end
-
     st
   end
 
@@ -177,11 +125,24 @@ defmodule Taxi.CLI do
     st
   end
 
+  # --- ¡LA FUNCIÓN QUE FALTABA! ---
+  # (Copiada de tu archivo original)
   defp parse_kv(s) do
     s
     |> String.split(~r/\s+/, trim: true)
     |> Enum.map(fn pair -> String.split(pair, "=", parts: 2) end)
     |> Enum.filter(fn l -> length(l) == 2 end)
     |> Map.new(fn [k, v] -> {k, v} end)
+  end
+
+  # --- LA FUNCIÓN QUE CORRIGE EL ERROR DE COMPILACIÓN ---
+  # Esta función se llama en tiempo de ejecución, no en compilación.
+  defp server_node do
+    System.get_env("SERVER_NODE") |> String.to_atom()
+  rescue
+    # Si falla (es nil), levanta el error en tiempo de ejecución.
+    _e ->
+      raise "SERVER_NODE environment variable not set. " <>
+            "Run as: SERVER_NODE=\"server@<ip_servidor>\" iex --name client@<ip_cliente> -e \"Taxi.CLI.start()\""
   end
 end

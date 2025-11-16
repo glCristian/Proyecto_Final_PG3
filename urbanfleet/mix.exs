@@ -7,8 +7,9 @@ defmodule Urbanfleet.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      escript: [main_module: Taxi.CLI]
+      # configurar la cookie por defecto
+      erl_opts: [cookie: :my_super_secret_cookie],
+      deps: deps()
     ]
   end
 
