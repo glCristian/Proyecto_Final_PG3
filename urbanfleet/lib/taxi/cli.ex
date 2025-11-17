@@ -39,11 +39,42 @@ defmodule Taxi.CLI do
       )
 
   defp handle("help", st) do
-    IO.puts(@moduledoc)
+    IO.puts("""
+    +------------------------------------------------------------------+
+    |                    UrbanFleet - Comandos                         |
+    +------------------------------------------------------------------+
 
-    IO.puts(
-      "Run as: SERVER_NODE=\"server@<ip_servidor>\" iex --name client@<ip_cliente> -e \"Taxi.CLI.start()\""
-    )
+    Uso General:
+      connect <usuario> <contraseña> <rol>
+          ->Inicia sesión o registra un usuario.
+          (rol: cliente | conductor)
+
+      disconnect
+          ->Cierra la sesión del usuario actual.
+
+      my_score
+          ->Muestra tu puntuación acumulada.
+
+      ranking
+          ->Muestra la tabla de puntuaciones de todos los usuarios.
+
+      help
+          ->Muestra este mensaje de ayuda.
+
+      quit
+          ->Cierra la aplicación.
+
+    Cliente:
+      request_trip origen=<lugar> destino=<lugar>
+          ->Solicita un nuevo viaje.
+
+    Conductor:
+      list_trips
+          ->Lista todos los viajes pendientes.
+
+      accept_trip <id_del_viaje(trip_###)>
+          ->Acepta un viaje pendiente.
+    """)
 
     st
   end
@@ -122,7 +153,7 @@ defmodule Taxi.CLI do
     end
   end
 
-  defp handle(<<"request_trip ", rest::binary>>, %{current_user: nil} = st),
+  defp handle(<<"request_trip ", _rest::binary>>, %{current_user: nil} = st),
     do:
       (
         IO.puts("Not connected.")
@@ -148,7 +179,7 @@ defmodule Taxi.CLI do
     st
   end
 
-  defp handle(<<"accept_trip ", id::binary>>, %{current_user: nil} = st),
+  defp handle(<<"accept_trip ", _id::binary>>, %{current_user: nil} = st),
     do:
       (
         IO.puts("Not connected.")

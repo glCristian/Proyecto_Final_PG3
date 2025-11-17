@@ -5,6 +5,8 @@ defmodule Taxi.Server do
   use GenServer
 
   def start_link(_), do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+
+  @impl true
   def init(_), do: {:ok, %{sessions: %{}, default_duration: 20, pending_ttl: 60}}
 
   # Public API (called by CLI)
