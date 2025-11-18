@@ -212,8 +212,7 @@ defmodule Taxi.CLI do
     |> Map.new(fn [k, v] -> {k, v} end)
   end
 
-  # --- LA FUNCIÓN QUE CORRIGE EL ERROR DE COMPILACIÓN ---
-  # Esta función se llama en tiempo de ejecución, no en compilación.
+
   defp server_node do
     case System.get_env("SERVER_NODE") do
       nil ->
